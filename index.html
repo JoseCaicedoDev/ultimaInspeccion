@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    .texto {
+      font-family: "Avenir Next", "Avenir", "Helvetica Neue", Arial, sans-serif;
+      color: #ffffff;
+      text-align: left;
+      margin: 0;
+      padding: 0;
+      text-shadow:
+        0 0 1px rgba(255, 255, 255, 0.35),
+        0 0 4px rgba(0, 180, 255, 0.35);
+    }
+
+    #detalle {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      line-height: 1.5;
+      white-space: normal;
+    }
+  </style>
+</head>
+<body>
+  <div id="detalle" class="texto">Cargando última inspección...</div>
+
+  <script>
+    const QUERY_URL =
+      "https://tecgisdev.tecna-ice.com/server/rest/services/HSE/FL_HSE_INSPECCION_VEHICULO/MapServer/0/query" +
+      "?where=1%3D1" +
+      "&outFields=fecha_insp%2Cplaca%2Cproyecto%2Clast_edited_date" +
+      "&returnGeometry=false" +
+      "&orderByFields=last_edited_date%20DESC" +
+      "&resultRecordCount=1" +
+      "&f=json";
+
+    function formatearFecha(valor) {
+      if (!valor) return "N/D";
+
+      const fecha = new Date(valor);
+      if (isNaN(fecha.getTime())) return "N/D";
+
+      return new Intl.DateTimeFormat("es-CO", {
+        timeZone: "America/Bogota",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+      }).format(fecha);
+    }
+
+    async function cargarDatos() {
+      try {
+        const resp = await fetch(QUERY_URL, {
+          method: "GET",
+          cache: "no-store"
+        });
+
+        if (!resp.ok) {
+          throw new Error("No fue posible consultar el servicio.");
+        }
+
+        const data = await resp.json();
+
+        if (!data.features || data.features.length === 0) {
+          document.getElementById("detalle").textContent =
+            "No hay inspección disponible.";
+          return;
+        }
+
+        const atr = data.features[0].attributes;
+
+        const fechaInspeccion = formatearFecha(atr.fecha_insp);
+        const placa = atr.placa || "N/D";
+        const proyecto = atr.proyecto || "N/D";
+
+        document.getElementById("detalle").textContent =
+          `Última inspección registrada: ${fechaInspeccion} - Placa: ${placa} - Proyecto: ${proyecto}.`;
+
+      } catch (error) {
+        document.getElementById("detalle").textContent =
+          "Error consultando la última inspección.";
+        console.error(error);
+      }
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>
